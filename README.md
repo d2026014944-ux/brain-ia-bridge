@@ -1,2 +1,152 @@
 # brain-ia-bridge
-Brain-IA bridge for EEG-driven intent decoding with HyperBitnet and TRIBE integration
+
+Bridge integrating EEG (Crown / Neurosity), HyperBitnet and TRIBE for
+biofeedback experiments and real-time intent decoding.
+
+## Overview
+
+Neuroadaptive MVP pipeline:
+
+```
+EEG → features (focus / calm / gamma) → adaptive threshold → HyperBitnet → TRIBE
+```
+
+## Repository Structure
+
+```
+src/
+├── core/
+│   ├── eeg_adapter.py        # Compute scalar score from EEG features
+│   ├── calibration.py        # Adaptive threshold calibration from baseline
+│   ├── hyperbitnet.py        # HyperBitnet node state propagation
+│   └── fusion.py             # Fuse classical + quantum-inspired state vectors
+├── integration/
+│   ├── tribe_adapter.py      # Map intent vector to TRIBE high-level command
+│   └── neurosity_adapter.py  # Neurosity SDK adapter (stub + mock stream)
+├── main.py                   # Simple one-shot MVP demo
+├── realtime_loop.py          # Realtime loop with simulated EEG stream
+└── run_realtime_neurosity.py # Realtime loop using the Neurosity adapter
+requirements.txt
+```
+
+---
+
+## Quickstart
+
+### 1. Create a virtual environment
+
+```bash
+python -m venv .venv
+```
+
+### 2. Activate the environment
+
+**Linux / macOS**
+```bash
+source .venv/bin/activate
+```
+
+**Windows (PowerShell)**
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> All core functionality uses the Python standard library, so this step is a
+> no-op until you add external packages (e.g. the real Neurosity SDK).
+
+### 4. Run the simple MVP demo
+
+```bash
+python src/main.py
+```
+
+Expected output:
+
+```
+=== Calibration ===
+{'baseline_mean': 0.322, 'baseline_std': 0.0226, 'low': 0.3446, 'high': 0.3672}
+
+=== Live Inference ===
+sample_1: {'score': 0.41, 'state': 1, 'intent_energy': ..., 'command': 'CONFIRM_INTENT'}
+sample_2: {'score': 0.78, 'state': 1, 'intent_energy': ..., 'command': 'CONFIRM_INTENT'}
+sample_3: {'score': 0.216, 'state': -1, 'intent_energy': ..., 'command': 'IDLE'}
+```
+
+### 5. Run the simulated realtime loop
+
+```bash
+python src/realtime_loop.py
+```
+
+Press **Ctrl+C** to stop early (the loop finishes automatically after ~5 s).
+
+### 6. Run the Neurosity adapter (mock stream)
+
+```bash
+python src/run_realtime_neurosity.py
+```
+
+> `use_mock_stream=True` is enabled by default in
+> `src/run_realtime_neurosity.py`.  No real hardware is required.
+
+Press **Ctrl+C** to stop.
+
+---
+
+## How calibration works
+
+1. The system collects a resting-state baseline (e.g. 8 seconds).
+2. It computes the mean and standard deviation of the EEG score.
+3. Adaptive thresholds are derived:
+   - `low  = mean + 1 × std` — transition boundary
+   - `high = mean + 2 × std` — confirmation boundary
+
+Discrete intent states:
+
+| State | Meaning              |
+|-------|----------------------|
+| `-1`  | Disconnection / idle |
+|  `0`  | Ambiguous / rising   |
+|  `1`  | Confirmed intent     |
+
+---
+
+## Integrating the real Neurosity SDK
+
+Open `src/integration/neurosity_adapter.py` and follow the `TODO` comments:
+
+1. Replace the stub in `connect()` with real SDK authentication and device
+   selection.
+2. Subscribe to the `focus`, `calm`, and `brainwaves` observables.
+3. Merge the async signals into the standard feature dict:
+   ```python
+   {"focus": 0..1, "calm": 0..1, "gamma": 0..1, "timestamp": float}
+   ```
+4. Update `requirements.txt` to pin the Neurosity SDK version.
+
+---
+
+## Roadmap
+
+- [ ] Integrate real Crown / Neurosity SDK
+- [ ] Persist session logs (CSV / JSON)
+- [ ] Per-user intent training (e.g. start / confirm)
+- [ ] Unit tests for the decision pipeline
+- [ ] Live score / state visualisation
+
+---
+
+## Ethical notice
+
+This project is experimental and educational.
+
+- Do **not** use for medical diagnosis.
+- Do **not** use for clinical decision-making.
+- Do **not** use for controlling safety-critical devices without formal
+  validation and safety protocols.
