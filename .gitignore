@@ -34,3 +34,19 @@ htmlcov/
 *.log
 *.csv
 session_data/
+
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Git Secrets
+secrets.json
+*.pem
+*.key
+
+# Build/Dev
+node_modules/
+dist/
+build/
+.DS_Store
