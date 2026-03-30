@@ -1,0 +1,6 @@
+# brain-ia-bridge runtime dependencies
+# All core functionality uses Python standard library only.
+# Add external packages below when integrating the real Neurosity SDK.
+
+# Example (uncomment when using the real SDK):
+# neurosity==3.x.x
