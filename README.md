@@ -11,21 +11,21 @@ Neuroadaptive MVP pipeline:
 EEG → features (focus / calm / gamma) → adaptive threshold → HyperBitnet → TRIBE
 ```
 
-## Se o repositório parecer "vazio"
+## If the repository looks "empty"
 
-Se você está no `main` e ainda não vê os arquivos do scaffold (mesmo vendo
-"14 files changed" na PR), significa que as mudanças ainda estão em uma branch
-de feature e **ainda não foram mergeadas no `main`**.
+If you are on `main` and still do not see scaffold files (even when you see
+"14 files changed" in the PR), the changes are still on a feature branch and
+**have not been merged into `main` yet**.
 
-Checklist rápido:
+Quick checklist:
 
-1. Abra a PR de scaffold no GitHub e confirme que ela está **Merged**.
-2. No seu clone local, execute:
+1. Open the scaffold PR on GitHub and confirm it is **Merged**.
+2. In your local clone, run:
    ```bash
    git checkout main
    git pull origin main
    ```
-3. Se quiser ver a branch da PR antes do merge:
+3. If you want to inspect the PR branch before merge:
    ```bash
    git fetch origin
    git checkout copilot/initialize-repository-with-mvp-scaffold
