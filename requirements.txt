@@ -5,3 +5,5 @@
 # Example (uncomment when using the real SDK):
 # neurosity==3.x.x
 pytest==8.3.5
+pybind11==2.13.6
+setuptools==80.9.0

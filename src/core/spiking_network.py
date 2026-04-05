@@ -2,6 +2,6 @@ from core._native_loader import load_native_core
 
 
 _native = load_native_core()
-SynapseSTDP = _native.SynapseSTDP
+SpikingNetwork = _native.SpikingNetwork
 
-__all__ = ["SynapseSTDP"]
+__all__ = ["SpikingNetwork"]
