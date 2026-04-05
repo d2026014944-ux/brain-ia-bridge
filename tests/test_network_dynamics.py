@@ -5,13 +5,14 @@ def test_isolated_spikes_do_not_trigger_stable_firing():
     """
     Firing-rate guard: isolated spikes must not pass temporal consensus.
     """
-    smoother = SlidingWindowStateFilter(window_size=8, min_votes=5)
+    window_size = 8
+    smoother = SlidingWindowStateFilter(window_size=window_size, min_votes=5)
     stream = [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]
 
     outputs = [smoother.push(state) for state in stream]
 
     # After warmup, no non-zero stable state should be emitted from sparse spikes.
-    warmed_outputs = outputs[7:]
+    warmed_outputs = outputs[window_size - 1 :]
     assert all(state == 0 for state in warmed_outputs)
 
 
