@@ -9,10 +9,9 @@ class SynapseSTDP:
     W_MIN = 0.0
 
     def __init__(self, weight: float = 0.5):
-        self.weight = float(weight)
+        self.weight = max(self.W_MIN, min(self.W_MAX, float(weight)))
         self.last_pre_t_ms = None
         self.last_post_t_ms = None
-        self.weight = max(self.W_MIN, min(self.W_MAX, self.weight))
 
     def _apply_delta(self, delta: float) -> None:
         self.weight = max(self.W_MIN, min(self.W_MAX, self.weight + delta))
