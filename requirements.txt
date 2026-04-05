@@ -4,3 +4,4 @@
 
 # Example (uncomment when using the real SDK):
 # neurosity==3.x.x
+pytest==8.3.5

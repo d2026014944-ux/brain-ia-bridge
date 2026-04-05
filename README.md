@@ -117,6 +117,12 @@ python src/run_realtime_neurosity.py
 
 Press **Ctrl+C** to stop.
 
+### 7. Run unit tests
+
+```bash
+pytest -q
+```
+
 ---
 
 ## How calibration works
