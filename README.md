@@ -123,6 +123,23 @@ Press **Ctrl+C** to stop.
 pytest -q
 ```
 
+### 8. Run Mind Panel (8x8 synaptic strength UI)
+
+```bash
+python src/mind_panel.py --state-file src/mind_panel_state.json
+```
+
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765) to view the panel.
+
+### 9. Run AI Teacher loop (40Hz gamma + STDP growth)
+
+```bash
+python src/run_teacher.py --state-file src/mind_panel_state.json
+```
+
+This process updates `src/mind_panel_state.json` every 100 ms so Mind Panel reflects
+spikes and synaptic strength changes in real time.
+
 ---
 
 ## How calibration works
