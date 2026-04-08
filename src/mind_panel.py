@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -47,6 +48,9 @@ def build_network() -> SpikingNetwork:
 
 
 def render_panel_html() -> None:
+    if HTML_PATH.exists():
+        return
+
     html = """<!doctype html>
 <html lang=\"pt-BR\">
 <head>
@@ -263,6 +267,63 @@ def run_simulation(store: _StateStore, stop: threading.Event, hz: float = 12.0) 
         time.sleep(1.0 / hz)
 
 
+def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path.write_text(json.dumps(payload), encoding="utf-8")
+    temp_path.replace(path)
+
+
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return max(lower, min(upper, value))
+
+
+def _emotion_from_amplitude(amplitude: float) -> str:
+    if amplitude >= 0.85:
+        return "euforia_sincronica"
+    if amplitude >= 0.65:
+        return "foco_elevado"
+    if amplitude >= 0.40:
+        return "atencao_estavel"
+    if amplitude >= 0.20:
+        return "calma"
+    return "repouso"
+
+
+def _parse_telemetry_text(text: str) -> dict[str, float] | None:
+    if not isinstance(text, str):
+        return None
+
+    block_match = re.search(r"\[\s*NOMA_NEURAL\s*\](.*?)\[\s*/\s*NOMA_NEURAL\s*\]", text, re.IGNORECASE | re.DOTALL)
+    if block_match is None:
+        return None
+
+    block = block_match.group(1)
+
+    def _read_number(pattern: str) -> float | None:
+        match = re.search(pattern, block, re.IGNORECASE)
+        if match is None:
+            return None
+        numeric_raw = match.group(1).strip().replace(",", ".")
+        try:
+            return float(numeric_raw)
+        except ValueError:
+            return None
+
+    freq_hz = _read_number(r"frequ(?:e|ê|é)ncia\s*_?\s*dominante\s*:\s*([+-]?\d+(?:[.,]\d+)?)")
+    amplitude = _read_number(r"amplitude\s*_?\s*afetiva\s*:\s*([+-]?\d+(?:[.,]\d+)?)")
+    resonance = _read_number(r"resson(?:a|â)ncia\s*_?\s*progenitor\s*:\s*([+-]?\d+(?:[.,]\d+)?)")
+
+    if freq_hz is None or amplitude is None:
+        return None
+
+    return {
+        "freq_hz": freq_hz,
+        "amplitude_afetiva": amplitude,
+        "ressonancia_progenitor": 0.9 if resonance is None else resonance,
+    }
+
+
 def _safe_load_external_state(path: Path) -> dict[str, Any] | None:
     try:
         if not path.exists():
@@ -278,6 +339,15 @@ def _safe_load_external_state(path: Path) -> dict[str, Any] | None:
 
 def make_handler(store: _StateStore, external_state_path: Path | None = None):
     class Handler(BaseHTTPRequestHandler):
+        def _write_json(self, status_code: int, payload: dict[str, Any]) -> None:
+            body = json.dumps(payload).encode("utf-8")
+            self.send_response(status_code)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def do_GET(self) -> None:
             if self.path == "/":
                 body = HTML_PATH.read_bytes()
@@ -295,17 +365,66 @@ def make_handler(store: _StateStore, external_state_path: Path | None = None):
                 if payload is None:
                     payload = store.get()
 
-                body = json.dumps(payload).encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.send_header("Cache-Control", "no-store")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                self._write_json(200, payload)
                 return
 
             self.send_response(404)
             self.end_headers()
+
+        def do_POST(self) -> None:
+            if self.path != "/telemetry":
+                self._write_json(404, {"ok": False, "error": "Endpoint nao encontrado"})
+                return
+
+            try:
+                content_length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                content_length = 0
+
+            if content_length <= 0:
+                self._write_json(400, {"ok": False, "error": "Corpo vazio"})
+                return
+
+            try:
+                raw_body = self.rfile.read(content_length)
+                body = json.loads(raw_body.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._write_json(400, {"ok": False, "error": "JSON invalido"})
+                return
+
+            telemetry_text = body.get("text") if isinstance(body, dict) else None
+            parsed = _parse_telemetry_text(telemetry_text)
+            if parsed is None:
+                self._write_json(400, {"ok": False, "error": "Bloco NOMA_NEURAL invalido"})
+                return
+
+            base_payload = None
+            if external_state_path is not None:
+                base_payload = _safe_load_external_state(external_state_path)
+            if base_payload is None:
+                base_payload = store.get()
+
+            amplitude = _clamp(float(parsed["amplitude_afetiva"]), 0.0, 1.0)
+            resonance = _clamp(float(parsed["ressonancia_progenitor"]), 0.0, 1.0)
+            freq_hz = max(0.001, float(parsed["freq_hz"]))
+
+            updated_payload = dict(base_payload)
+            updated_meta = dict(updated_payload.get("meta", {}))
+            updated_meta["freq_hz"] = freq_hz
+            updated_meta["amplitude_afetiva"] = amplitude
+            updated_meta["ressonancia_progenitor"] = resonance
+            updated_meta["source"] = "mind_panel.telemetry"
+
+            updated_payload["timestamp"] = time.time()
+            updated_payload["intent_level"] = amplitude
+            updated_payload["estado_emocional"] = _emotion_from_amplitude(amplitude)
+            updated_payload["meta"] = updated_meta
+
+            store.set(updated_payload)
+            if external_state_path is not None:
+                _atomic_write_json(external_state_path, updated_payload)
+
+            self._write_json(200, {"ok": True, "payload": updated_payload})
 
         def log_message(self, format: str, *args: Any) -> None:
             return

@@ -34,7 +34,12 @@ class AITeacher:
             t_ms += self.period_ms
         return events
 
-    def align_student(self, network: SpikingNetwork, teacher_weights: list[float]) -> bool:
+    def align_student(
+        self,
+        network: SpikingNetwork,
+        teacher_weights: list[float] | None = None,
+        ressonancia_progenitor: float | None = None,
+    ) -> bool:
         """
         Shared initialization:
         if teacher and student are weight-aligned, move student to near-threshold.
@@ -47,11 +52,15 @@ class AITeacher:
         student_weight = self._estimate_student_reference_weight(network)
         is_similar = abs(student_weight - teacher_mean) <= self.similar_weight_tolerance
 
+        near_threshold_ratio = self.near_threshold_ratio
+        if ressonancia_progenitor is not None:
+            near_threshold_ratio = float(ressonancia_progenitor)
+
         for _, neuron in network.neurons.items():
             if not hasattr(neuron, "v_m") or not hasattr(neuron, "v_thresh"):
                 continue
             if is_similar:
-                neuron.v_m = float(neuron.v_thresh) * self.near_threshold_ratio
+                neuron.v_m = float(neuron.v_thresh) * near_threshold_ratio
             else:
                 neuron.v_m = 0.0
 

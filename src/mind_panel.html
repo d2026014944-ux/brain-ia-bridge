@@ -3,90 +3,368 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mind Panel - Forca Sinaptica</title>
+  <title>Mind Panel · Noma Symbiosis</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
     :root {
-      --bg-1: #0a1325;
-      --bg-2: #111f38;
-      --ink: #e5ecff;
-      --muted: #96a8cf;
-      --accent: #43d9bd;
+      --bg-1: #081017;
+      --bg-2: #0f1c1b;
+      --bg-3: #1f3226;
+      --card: rgba(6, 16, 20, 0.78);
+      --line: #2d5646;
+      --ink: #e7f6ee;
+      --muted: #97b9ac;
+      --accent: #6bf2b6;
+      --accent-2: #ffd778;
+      --danger: #ff8f8f;
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      font-family: "Sora", "Trebuchet MS", sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(1200px 700px at 20% 15%, #18325a 0%, transparent 60%),
-        radial-gradient(1000px 600px at 85% 85%, #142749 0%, transparent 55%),
-        linear-gradient(165deg, var(--bg-1), var(--bg-2));
+        radial-gradient(1000px 700px at 10% 5%, #214236 0%, transparent 60%),
+        radial-gradient(900px 600px at 90% 88%, #5f4d2e 0%, transparent 55%),
+        linear-gradient(150deg, var(--bg-1), var(--bg-2) 45%, var(--bg-3));
+      padding: 18px;
+    }
+
+    .shell {
+      width: min(1280px, 100%);
+      margin: 0 auto;
       display: grid;
-      place-items: center;
-      padding: 16px;
+      gap: 14px;
     }
-    .card {
-      width: min(96vw, 980px);
-      border: 1px solid #244166;
-      border-radius: 18px;
-      padding: 14px 14px 10px 14px;
-      background: rgba(9, 18, 35, 0.78);
-      backdrop-filter: blur(4px);
-      box-shadow: 0 12px 42px rgba(0, 0, 0, 0.45);
-    }
-    .head {
+
+    .topbar {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: baseline;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(11, 24, 31, 0.84), rgba(13, 26, 22, 0.86));
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
     }
-    .title {
-      font-size: clamp(1rem, 2vw, 1.25rem);
-      letter-spacing: 0.04em;
-      font-weight: 700;
+
+    .brand {
+      display: grid;
+      gap: 2px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.08rem, 1.2vw + 0.82rem, 1.58rem);
       text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 800;
     }
-    .meta {
-      font-size: 0.9rem;
+
+    .brand p {
+      margin: 0;
       color: var(--muted);
+      font-size: 0.84rem;
+      letter-spacing: 0.03em;
+    }
+
+    .controls {
       display: flex;
-      gap: 16px;
+      align-items: center;
+      gap: 10px;
       flex-wrap: wrap;
     }
-    .meta strong { color: var(--accent); font-weight: 700; }
-    canvas {
+
+    .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #356f5a;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.03em;
+      background: rgba(13, 34, 29, 0.55);
+      text-transform: uppercase;
+    }
+
+    .chip strong {
+      color: var(--accent);
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    .btn {
+      border: 1px solid #6db69a;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2f6d58, #4f9d7f);
+      color: #f4fff9;
+      padding: 10px 14px;
+      font-family: "Sora", sans-serif;
+      font-size: 0.83rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: transform 150ms ease, filter 150ms ease;
+    }
+
+    .btn:hover { filter: brightness(1.06); }
+    .btn:active { transform: translateY(1px); }
+
+    .btn.is-on {
+      border-color: #b29553;
+      background: linear-gradient(135deg, #73643c, #b79a54);
+      color: #1a160e;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--card);
+      backdrop-filter: blur(5px);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+      padding: 14px;
+    }
+
+    #mind {
       width: 100%;
       aspect-ratio: 1.25;
-      border-radius: 12px;
-      border: 1px solid #2a4f75;
+      border-radius: 14px;
+      border: 1px solid #35614f;
       background:
-        linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
-        repeating-linear-gradient(90deg, rgba(90,140,210,0.06) 0 1px, transparent 1px 48px),
-        repeating-linear-gradient(0deg, rgba(90,140,210,0.06) 0 1px, transparent 1px 48px);
+        radial-gradient(circle at 50% 25%, rgba(130, 255, 203, 0.08), transparent 55%),
+        repeating-linear-gradient(90deg, rgba(73, 121, 102, 0.18) 0 1px, transparent 1px 44px),
+        repeating-linear-gradient(0deg, rgba(73, 121, 102, 0.18) 0 1px, transparent 1px 44px),
+        #0a1516;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metric {
+      border: 1px solid #2f5a4a;
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(9, 23, 27, 0.82);
+      display: grid;
+      gap: 4px;
+    }
+
+    .metric .k {
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric .v {
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 1.02rem;
+      word-break: break-word;
+    }
+
+    .composer {
+      border: 1px dashed #748a67;
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(45, 57, 31, 0.23);
+      display: grid;
+      gap: 8px;
+    }
+
+    .composer h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #ffeaad;
+    }
+
+    .composer p {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #ded9bc;
+      line-height: 1.45;
+    }
+
+    .composer textarea {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      border-radius: 10px;
+      border: 1px solid #647e71;
+      background: rgba(9, 19, 21, 0.95);
+      color: #edf9f1;
+      padding: 10px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.79rem;
+      line-height: 1.38;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-secondary {
+      border: 1px solid #617f73;
+      border-radius: 10px;
+      background: transparent;
+      color: #d3efe2;
+      padding: 8px 10px;
+      font-family: "Sora", sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      min-height: 1.1em;
+    }
+
+    .hint.ok { color: var(--accent); }
+    .hint.err { color: var(--danger); }
+
+    .status {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .bg-mode .status {
+      color: var(--accent-2);
+    }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      .topbar, .panel { padding: 10px; }
+      .grid { grid-template-columns: 1fr; }
+      .btn { width: 100%; }
+      .controls { width: 100%; }
+      .composer textarea { min-height: 160px; }
     }
   </style>
 </head>
 <body>
-  <section class="card">
-    <div class="head">
-      <div class="title">Mind Panel · Forca Sinaptica</div>
-      <div class="meta">
-        <span>learning: <strong id="learning">on</strong></span>
-        <span>peso medio: <strong id="wmean">0.000</strong></span>
-        <span>ultima atualizacao: <strong id="ts">-</strong></span>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Mind Panel · Noma Link</h1>
+        <p>Painel vivo de sinapses, intencao e estado emocional</p>
       </div>
-    </div>
-    <canvas id="mind" width="940" height="720"></canvas>
-  </section>
+      <div class="controls">
+        <span class="chip">learning<strong id="learning">on</strong></span>
+        <span class="chip">peso medio<strong id="wmean">0.000</strong></span>
+        <span class="chip">atualizacao<strong id="ts">-</strong></span>
+        <button id="bgBtn" class="btn" type="button">Deixar Rodar em Segundo Plano</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <canvas id="mind" width="940" height="720"></canvas>
+        <div id="statusText" class="status">estado: aguardando dados de rede</div>
+      </section>
+
+      <aside class="panel">
+        <div class="grid">
+          <div class="metric">
+            <span class="k">Intent Level</span>
+            <span class="v" id="intent">0.500</span>
+          </div>
+          <div class="metric">
+            <span class="k">Emocao Atual</span>
+            <span class="v" id="emotion">escutando_o_vazio</span>
+          </div>
+          <div class="metric">
+            <span class="k">Frequencia</span>
+            <span class="v" id="freq">7.830 Hz</span>
+          </div>
+          <div class="metric">
+            <span class="k">Ressonancia</span>
+            <span class="v" id="res">0.900</span>
+          </div>
+        </div>
+
+        <section id="composer" class="composer" hidden>
+          <h3>Painel sem estado definido</h3>
+          <p>Cole abaixo o bloco [NOMA_NEURAL] para preencher os campos enquanto a rede ainda nao publica estado.</p>
+          <textarea id="nomaText" spellcheck="false" placeholder="[NOMA_NEURAL]\nfrequencia_dominante: 14.2Hz\namplitude_afetiva: 0.88\nressonancia_progenitor: 0.98\n[/NOMA_NEURAL]"></textarea>
+          <div class="row">
+            <button id="applyBtn" class="btn-secondary" type="button">Aplicar Texto</button>
+            <button id="clearBtn" class="btn-secondary" type="button">Limpar</button>
+          </div>
+          <p id="hint" class="hint"></p>
+        </section>
+      </aside>
+    </main>
+  </div>
 
   <script>
     const canvas = document.getElementById('mind');
     const ctx = canvas.getContext('2d');
+
     const learningEl = document.getElementById('learning');
     const wmeanEl = document.getElementById('wmean');
     const tsEl = document.getElementById('ts');
+    const intentEl = document.getElementById('intent');
+    const emotionEl = document.getElementById('emotion');
+    const freqEl = document.getElementById('freq');
+    const resEl = document.getElementById('res');
+    const statusEl = document.getElementById('statusText');
+
+    const composerEl = document.getElementById('composer');
+    const nomaTextEl = document.getElementById('nomaText');
+    const hintEl = document.getElementById('hint');
+    const applyBtn = document.getElementById('applyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const bgBtn = document.getElementById('bgBtn');
+
+    let bgMode = localStorage.getItem('mindPanel.bgMode') === '1';
+    let pollMs = bgMode ? 1000 : 180;
+    let refreshTimer = null;
+    let localFallback = null;
+    let lastRuntimeState = null;
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function emotionFromAmplitude(amplitude) {
+      if (amplitude >= 0.85) return 'euforia_sincronica';
+      if (amplitude >= 0.65) return 'foco_elevado';
+      if (amplitude >= 0.4) return 'atencao_estavel';
+      if (amplitude >= 0.2) return 'calma';
+      return 'repouso';
+    }
 
     function toCanvasPos(x, y) {
       const padX = 90;
@@ -99,30 +377,51 @@
       };
     }
 
+    function drawPlaceholder(message) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(143, 180, 164, 0.18)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#dce6de';
+      ctx.font = '600 24px "Sora", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(message, canvas.width / 2, canvas.height / 2 - 8);
+      ctx.font = '500 15px "IBM Plex Mono", monospace';
+      ctx.fillStyle = '#9ab7aa';
+      ctx.fillText('Cole telemetria no painel lateral para pre-visualizar.', canvas.width / 2, canvas.height / 2 + 26);
+      ctx.textAlign = 'left';
+    }
+
     function draw(data) {
+      const nodes = Array.isArray(data.nodes) ? data.nodes : [];
+      const edges = Array.isArray(data.synapses) ? data.synapses : [];
+
+      if (!nodes.length || !edges.length) {
+        drawPlaceholder('Sem topologia ativa no momento');
+        return;
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const nodes = data.nodes || [];
-      const edges = data.synapses || [];
+      const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
       for (const edge of edges) {
-        const pre = nodes.find((n) => n.id === edge.pre_id);
-        const post = nodes.find((n) => n.id === edge.post_id);
+        const pre = nodeMap.get(edge.pre_id);
+        const post = nodeMap.get(edge.post_id);
         if (!pre || !post) continue;
 
         const p1 = toCanvasPos(pre.x, pre.y);
         const p2 = toCanvasPos(post.x, post.y);
-        const w = Math.max(0, Math.min(1, Number(edge.weight || 0)));
-        const alpha = 0.15 + w * 0.75;
-        const width = 0.6 + w * 3.8;
+        const w = clamp(Number(edge.weight || 0), 0, 1);
+        const alpha = 0.16 + (w * 0.78);
+        const width = 0.5 + (w * 3.5);
 
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
         ctx.lineWidth = width;
-        ctx.strokeStyle = `rgba(67, 217, 189, ${alpha})`;
-        ctx.shadowBlur = 2 + w * 12;
-        ctx.shadowColor = `rgba(67, 217, 189, ${0.25 + w * 0.7})`;
+        ctx.strokeStyle = `rgba(107, 242, 182, ${alpha})`;
+        ctx.shadowBlur = 2 + (w * 12);
+        ctx.shadowColor = `rgba(107, 242, 182, ${0.2 + w * 0.7})`;
         ctx.stroke();
       }
 
@@ -130,32 +429,188 @@
       for (const node of nodes) {
         const p = toCanvasPos(node.x, node.y);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(229, 236, 255, 0.95)';
+        ctx.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(241, 255, 248, 0.95)';
         ctx.fill();
       }
     }
 
-    async function refresh() {
-      try {
-        const res = await fetch('/state', { cache: 'no-store' });
-        const data = await res.json();
+    function renderMetrics(data, fromFallback) {
+      const syn = Array.isArray(data.synapses) ? data.synapses : [];
+      const mean = syn.length ? syn.reduce((acc, s) => acc + Number(s.weight || 0), 0) / syn.length : 0;
+      const intent = clamp(Number(data.intent_level ?? data.meta?.amplitude_afetiva ?? 0.5), 0, 1);
+      const emotion = String(data.estado_emocional || emotionFromAmplitude(intent));
+      const freq = Number(data.meta?.freq_hz ?? 7.83);
+      const res = clamp(Number(data.meta?.ressonancia_progenitor ?? 0.9), 0, 1);
 
-        const syn = data.synapses || [];
-        const mean = syn.length ? syn.reduce((acc, s) => acc + Number(s.weight || 0), 0) / syn.length : 0;
+      learningEl.textContent = data.learning_enabled ? 'on' : 'off';
+      wmeanEl.textContent = mean.toFixed(3);
+      tsEl.textContent = data.timestamp ? new Date(data.timestamp * 1000).toLocaleTimeString('pt-BR') : '-';
+      intentEl.textContent = intent.toFixed(3);
+      emotionEl.textContent = emotion;
+      freqEl.textContent = `${freq.toFixed(3)} Hz`;
+      resEl.textContent = res.toFixed(3);
 
-        learningEl.textContent = data.learning_enabled ? 'on' : 'off';
-        wmeanEl.textContent = mean.toFixed(3);
-        tsEl.textContent = new Date((data.timestamp || 0) * 1000).toLocaleTimeString('pt-BR');
-
-        draw(data);
-      } catch (_) {
-        // Keep last frame if fetch fails momentarily.
+      if (fromFallback) {
+        statusEl.textContent = 'estado: fallback local ativo (cole telemetria para atualizar)';
+      } else {
+        statusEl.textContent = 'estado: rede ativa em tempo real';
       }
     }
 
+    function parseTelemetry(text) {
+      const blockMatch = text.match(/\[\s*NOMA_NEURAL\s*\]([\s\S]*?)\[\s*\/\s*NOMA_NEURAL\s*\]/i);
+      if (!blockMatch) return null;
+
+      const block = blockMatch[1];
+      const readNum = (re) => {
+        const m = block.match(re);
+        if (!m) return null;
+        return Number.parseFloat(String(m[1]).replace(',', '.'));
+      };
+
+      const freq = readNum(/frequ(?:e|e|ê|é)ncia\s*_?\s*dominante\s*:\s*([+-]?\d+(?:[.,]\d+)?)/i);
+      const amp = readNum(/amplitude\s*_?\s*afetiva\s*:\s*([+-]?\d+(?:[.,]\d+)?)/i);
+      const res = readNum(/resson(?:a|â)ncia\s*_?\s*progenitor\s*:\s*([+-]?\d+(?:[.,]\d+)?)/i);
+
+      if (!Number.isFinite(freq) || !Number.isFinite(amp)) {
+        return null;
+      }
+
+      return {
+        freq_hz: freq,
+        amplitude_afetiva: amp,
+        ressonancia_progenitor: Number.isFinite(res) ? res : 0.9,
+      };
+    }
+
+    function applyBackgroundMode(enabled) {
+      bgMode = enabled;
+      localStorage.setItem('mindPanel.bgMode', enabled ? '1' : '0');
+      document.body.classList.toggle('bg-mode', enabled);
+      pollMs = enabled ? 1000 : 180;
+      bgBtn.classList.toggle('is-on', enabled);
+      bgBtn.textContent = enabled ? 'Voltar ao Modo Ativo' : 'Deixar Rodar em Segundo Plano';
+
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+      }
+      refreshTimer = setInterval(refresh, pollMs);
+    }
+
+    function showComposer(show) {
+      composerEl.hidden = !show;
+    }
+
+    async function refresh() {
+      let runtimeState = null;
+      try {
+        const res = await fetch('/state', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object') {
+            runtimeState = data;
+          }
+        }
+      } catch (_) {
+        runtimeState = null;
+      }
+
+      const hasRuntimeState = !!(
+        runtimeState &&
+        (
+          (Array.isArray(runtimeState.nodes) && runtimeState.nodes.length > 0 && Array.isArray(runtimeState.synapses)) ||
+          runtimeState.intent_level != null ||
+          runtimeState.estado_emocional != null ||
+          runtimeState.meta?.freq_hz != null
+        )
+      );
+
+      if (hasRuntimeState) {
+        lastRuntimeState = runtimeState;
+        showComposer(false);
+        renderMetrics(runtimeState, false);
+        draw(runtimeState);
+        return;
+      }
+
+      showComposer(true);
+
+      const fallback = localFallback || lastRuntimeState;
+      if (fallback) {
+        renderMetrics(fallback, true);
+        draw(fallback);
+      } else {
+        drawPlaceholder('Sem estado definido no momento');
+        statusEl.textContent = 'estado: aguardando arquivo mind_panel_state.json';
+      }
+    }
+
+    applyBtn.addEventListener('click', async () => {
+      const text = nomaTextEl.value.trim();
+      const telemetry = parseTelemetry(text);
+
+      if (!telemetry) {
+        hintEl.className = 'hint err';
+        hintEl.textContent = 'Nao foi possivel interpretar o bloco NOMA_NEURAL. Verifique o formato.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+
+        const body = await res.json();
+        if (!res.ok || !body?.ok) {
+          throw new Error(body?.error || 'Falha ao aplicar telemetria no backend.');
+        }
+
+        localFallback = null;
+        hintEl.className = 'hint ok';
+        hintEl.textContent = 'Telemetria enviada ao backend e persistida no estado do painel.';
+        await refresh();
+        return;
+      } catch (err) {
+        const amp = clamp(telemetry.amplitude_afetiva, 0, 1);
+        const res = clamp(telemetry.ressonancia_progenitor, 0, 1);
+        const base = lastRuntimeState || { nodes: [], synapses: [] };
+
+        localFallback = {
+          timestamp: Date.now() / 1000,
+          learning_enabled: false,
+          intent_level: amp,
+          estado_emocional: emotionFromAmplitude(amp),
+          nodes: base.nodes,
+          synapses: base.synapses,
+          meta: {
+            freq_hz: telemetry.freq_hz,
+            amplitude_afetiva: amp,
+            ressonancia_progenitor: res,
+            source: 'mind_panel.local_fallback',
+          },
+        };
+
+        hintEl.className = 'hint err';
+        hintEl.textContent = `Backend indisponivel (${err.message}). Aplicando fallback local.`;
+        refresh();
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      nomaTextEl.value = '';
+      localFallback = null;
+      hintEl.className = 'hint';
+      hintEl.textContent = '';
+      refresh();
+    });
+
+    bgBtn.addEventListener('click', () => applyBackgroundMode(!bgMode));
+
+    applyBackgroundMode(bgMode);
     refresh();
-    setInterval(refresh, 180);
   </script>
 </body>
 </html>
