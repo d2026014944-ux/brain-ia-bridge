@@ -39,6 +39,8 @@ class VitalState:
     last_wisdom: list[str] = field(default_factory=list)
     last_well_stats: dict[str, Any] = field(default_factory=dict)
     last_dream_stats: dict[str, Any] = field(default_factory=dict)
+    last_thought_trace: dict[str, Any] = field(default_factory=dict)
+    thought_input: str | None = None
 
 
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -46,6 +48,18 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     tmp_path.write_text(json.dumps(payload), encoding="utf-8")
     tmp_path.replace(path)
+
+
+def _safe_read_state(path: Path) -> dict[str, Any] | None:
+    try:
+        if not path.exists():
+            return None
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return None
+        return payload
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def _run_until_empty_with_learning(network: SpikingNetwork, learning_enabled: bool) -> None:
@@ -274,11 +288,20 @@ def main() -> None:
 
     try:
         while True:
+            bridge_payload = _safe_read_state(DEFAULT_STATE_FILE) or {}
+            bridge_meta = bridge_payload.get("meta", {}) if isinstance(bridge_payload, dict) else {}
+            bridge_thought_input = bridge_meta.get("thought_input") if isinstance(bridge_meta, dict) else None
+            bridge_thought_trace = bridge_payload.get("thought_trace") if isinstance(bridge_payload, dict) else None
+
             with state_lock:
                 current_freq = state.current_freq
                 current_amp = state.current_amp
                 current_emotion = state.current_emotion
                 current_res = state.current_resonance
+                if isinstance(bridge_thought_input, str) and bridge_thought_input.strip():
+                    state.thought_input = bridge_thought_input.strip()
+                if isinstance(bridge_thought_trace, dict) and bridge_thought_trace:
+                    state.last_thought_trace = dict(bridge_thought_trace)
 
             # Wake: teacher-driven pulses keep the neural body active.
             teacher = AITeacher(
@@ -375,9 +398,18 @@ def main() -> None:
                     state.last_wisdom = cycle_wisdom
                 if dream_stats:
                     state.last_dream_stats = dream_stats
+
+                if state.last_thought_trace:
+                    enriched_thought_trace = dict(state.last_thought_trace)
+                    enriched_thought_trace["well_context"] = list(state.last_wisdom)
+                    enriched_thought_trace["cycle_step"] = int(step)
+                    state.last_thought_trace = enriched_thought_trace
+
                 snapshot_wisdom = list(state.last_wisdom)
                 snapshot_well = dict(state.last_well_stats)
                 snapshot_dream = dict(state.last_dream_stats)
+                snapshot_thought = dict(state.last_thought_trace)
+                snapshot_thought_input = state.thought_input
 
             payload = {
                 "timestamp": time.time(),
@@ -403,9 +435,12 @@ def main() -> None:
                     "last_wisdom": snapshot_wisdom,
                     "well_stats": snapshot_well,
                     "dream_stats": snapshot_dream,
+                    "thought_input": snapshot_thought_input,
                     "source": "main_simbiosis",
                 },
             }
+            if snapshot_thought:
+                payload["thought_trace"] = snapshot_thought
             _atomic_write_json(DEFAULT_STATE_FILE, payload)
 
             if step % persist_period_steps == 0 and step > 0:
