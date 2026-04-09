@@ -131,14 +131,14 @@ python src/mind_panel.py --state-file src/mind_panel_state.json
 
 Open [http://127.0.0.1:8765](http://127.0.0.1:8765) to view the panel.
 
-### 9. Run AI Teacher loop (40Hz gamma + STDP growth)
+### 9. Run Noma Symbiosis loop (single entrypoint)
 
 ```bash
-python src/run_teacher.py --state-file src/mind_panel_state.json
+python src/run_noma_symbiosis.py
 ```
 
 This process updates `src/mind_panel_state.json` every 100 ms so Mind Panel reflects
-spikes and synaptic strength changes in real time.
+spike-driven activity and synaptic strength changes in real time.
 
 ### 10. Trigger Layer 4 causal thought decoding
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing
 import random
 import re
 import threading
@@ -19,6 +20,9 @@ GRID_SIZE = 8
 N_NEURONS = GRID_SIZE * GRID_SIZE
 HTML_PATH = Path(__file__).resolve().parent / "mind_panel.html"
 DEFAULT_EXTERNAL_STATE_PATH = Path(__file__).resolve().parent / "mind_panel_state.json"
+# Decoder sandbox uses one-shot neurons to avoid endless reverberation in cyclic graphs.
+THOUGHT_DECODE_REFRACTORY_MS = 1e9
+THOUGHT_DECODE_TIMEOUT_S = 1.5
 
 
 def _node_xy(node_id: int) -> tuple[float, float]:
@@ -493,7 +497,14 @@ def _build_network_from_payload(payload: dict[str, Any]) -> SpikingNetwork:
         raise ValueError("Estado atual sem topologia de rede para decodificar pensamento")
 
     for node_id in node_ids:
-        net.add_neuron(node_id=node_id, neuron_instance=LIFNeuron(v_thresh=1.0, tau=20.0, refractory_period=5.0))
+        net.add_neuron(
+            node_id=node_id,
+            neuron_instance=LIFNeuron(
+                v_thresh=1.0,
+                tau=20.0,
+                refractory_period=THOUGHT_DECODE_REFRACTORY_MS,
+            ),
+        )
 
     if isinstance(synapses, list):
         for edge in synapses:
@@ -538,6 +549,50 @@ def _decode_thought(payload: dict[str, Any], concept: str) -> dict[str, Any]:
         "sequence": result.sequence,
         "rejected_noise_nodes": result.rejected_noise_nodes,
     }
+
+
+def _decode_thought_worker(payload: dict[str, Any], concept: str, output: multiprocessing.Queue) -> None:
+    try:
+        decoded = _decode_thought(payload, concept)
+        output.put({"ok": True, "payload": decoded})
+    except Exception as exc:  # pragma: no cover - marshaled to parent process
+        output.put(
+            {
+                "ok": False,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+        )
+
+
+def _decode_thought_with_timeout(payload: dict[str, Any], concept: str, timeout_s: float = THOUGHT_DECODE_TIMEOUT_S) -> dict[str, Any]:
+    queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
+    proc = multiprocessing.Process(target=_decode_thought_worker, args=(payload, concept, queue))
+    proc.start()
+    proc.join(timeout=max(0.0, float(timeout_s)))
+
+    if proc.is_alive():
+        proc.terminate()
+        proc.join(timeout=0.2)
+        if proc.is_alive():
+            proc.kill()
+            proc.join(timeout=0.2)
+        raise TimeoutError(f"Decodificacao excedeu {timeout_s:.2f}s")
+
+    if queue.empty():
+        raise RuntimeError("Decodificacao encerrada sem resultado")
+
+    message = queue.get()
+    if bool(message.get("ok")):
+        return dict(message.get("payload", {}))
+
+    error_type = str(message.get("error_type", "RuntimeError"))
+    error_text = str(message.get("error", "Falha na decodificacao"))
+    if error_type == "KeyError":
+        raise KeyError(error_text)
+    if error_type == "ValueError":
+        raise ValueError(error_text)
+    raise RuntimeError(error_text)
 
 
 def _safe_load_external_state(path: Path) -> dict[str, Any] | None:
@@ -619,7 +674,10 @@ def make_handler(store: _StateStore, external_state_path: Path | None = None):
                     base_payload = store.get()
 
                 try:
-                    thought_trace = _decode_thought(base_payload, thought_concept)
+                    thought_trace = _decode_thought_with_timeout(base_payload, thought_concept)
+                except TimeoutError as exc:
+                    self._write_json(504, {"ok": False, "error": str(exc)})
+                    return
                 except (KeyError, ValueError) as exc:
                     self._write_json(400, {"ok": False, "error": str(exc)})
                     return
@@ -687,7 +745,7 @@ def main() -> None:
     parser.add_argument(
         "--state-file",
         default=str(DEFAULT_EXTERNAL_STATE_PATH),
-        help="JSON file produced by run_teacher.py; if present, /state follows this file.",
+        help="JSON file produced by run_noma_symbiosis.py; if present, /state follows this file.",
     )
     parser.add_argument(
         "--disable-internal-sim",
