@@ -140,6 +140,48 @@ python src/run_teacher.py --state-file src/mind_panel_state.json
 This process updates `src/mind_panel_state.json` every 100 ms so Mind Panel reflects
 spikes and synaptic strength changes in real time.
 
+### 10. Trigger Layer 4 causal thought decoding
+
+With Mind Panel running, send a thought command to decode a causal path:
+
+```bash
+curl -X POST http://127.0.0.1:8765/telemetry \
+   -H "Content-Type: application/json" \
+   -d '{"text":"pensar: Chuva"}'
+```
+
+Expected behavior:
+
+- The backend reconstructs the current graph from `/state`
+- It injects a pulse at the requested concept
+- It decodes the causal geodesic with Layer 4 (`ThoughtDecoder`)
+- The panel shows `[PENSAMENTO]: Chuva -> Molhado -> Oceano` (example)
+- The terminal prints the same chain for runtime observability
+
+---
+
+## Layer 4 Thought Decoder
+
+The project now includes a causal thought decoder in [src/core/thought_decoder.py](src/core/thought_decoder.py).
+
+Key APIs:
+
+- `SpikingNetwork.run_and_trace()`
+: Executes pending events and returns a deterministic firing trace.
+- `read_thought(network, start_concept, energy, ...)`
+: Injects a pulse, reads causal firing progression, maps IDs to concepts, and returns:
+   - causal chain (`concept_chain`)
+   - natural language rendering (Option C: template-based concrete clusters + generic abstract fallback)
+   - `confidence_score`
+   - `coherence_score`
+   - `thermodynamic_state`
+
+TDD coverage lives in [tests/test_thought_decoder.py](tests/test_thought_decoder.py), including:
+
+- Canonical chain: `Chuva -> Molhado -> Oceano`
+- Exclusion of disconnected node (`Fogo`)
+- Geodesic redirection under controlled local distortion
+
 ---
 
 ## How calibration works

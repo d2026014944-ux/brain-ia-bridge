@@ -12,6 +12,7 @@ from typing import Any
 
 from core.lif_neuron import LIFNeuron
 from core.spiking_network import SpikingNetwork
+from core.thought_decoder import ThoughtDecoder
 
 
 GRID_SIZE = 8
@@ -141,14 +142,95 @@ def render_panel_html() -> None:
     const wmeanEl = document.getElementById('wmean');
     const tsEl = document.getElementById('ts');
 
-    function toCanvasPos(x, y) {
+        function hashText(text) {
+            let h = 2166136261;
+            for (let i = 0; i < text.length; i += 1) {
+                h ^= text.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return h >>> 0;
+        }
+
+        function labelPalette(text) {
+            const hue = hashText(text) % 360;
+            return {
+                text: `hsla(${hue}, 95%, 78%, 0.98)`,
+                bg: `hsla(${hue}, 80%, 14%, 0.78)`,
+                stroke: `hsla(${hue}, 95%, 66%, 0.75)`,
+                glow: `hsla(${hue}, 95%, 65%, 0.42)`,
+            };
+        }
+
+        function roundRectPath(x, y, width, height, radius) {
+            const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + width - r, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+            ctx.lineTo(x + width, y + height - r);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+            ctx.lineTo(x + r, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+        }
+
+        function drawConceptLabel(x, y, text) {
+            const palette = labelPalette(text);
+            ctx.save();
+            ctx.font = '700 12px "Space Grotesk", "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const metrics = ctx.measureText(text);
+            const padX = 8;
+            const padY = 4;
+            const width = metrics.width + padX * 2;
+            const height = 20;
+            const rx = x - width / 2;
+            const ry = y - height - padY;
+
+            roundRectPath(rx, ry, width, height, 7);
+            ctx.fillStyle = palette.bg;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = palette.glow;
+            ctx.fill();
+
+            roundRectPath(rx, ry, width, height, 7);
+            ctx.lineWidth = 1;
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = palette.stroke;
+            ctx.stroke();
+
+            ctx.fillStyle = palette.text;
+            ctx.fillText(text, x, ry + height / 2 + 0.5);
+            ctx.restore();
+        }
+
+        function buildLayout(nodes) {
+            const xs = nodes.map((n) => Number(n.x || 0));
+            const ys = nodes.map((n) => Number(n.y || 0));
+            const minX = xs.length ? Math.min(...xs) : 0;
+            const maxX = xs.length ? Math.max(...xs) : 1;
+            const minY = ys.length ? Math.min(...ys) : 0;
+            const maxY = ys.length ? Math.max(...ys) : 1;
+
+            const dx = Math.max(1e-6, maxX - minX);
+            const dy = Math.max(1e-6, maxY - minY);
+
       const padX = 90;
       const padY = 60;
       const width = canvas.width - padX * 2;
       const height = canvas.height - padY * 2;
-      return {
-        x: padX + (x / 7) * width,
-        y: padY + (y / 7) * height,
+
+            return {
+                toCanvasPos(x, y) {
+                    return {
+                        x: padX + ((Number(x || 0) - minX) / dx) * width,
+                        y: padY + ((Number(y || 0) - minY) / dy) * height,
+                    };
+                }
       };
     }
 
@@ -157,14 +239,17 @@ def render_panel_html() -> None:
 
       const nodes = data.nodes || [];
       const edges = data.synapses || [];
+            const nodeNames = data.nomes || data.node_names || {};
+            const nodeById = new Map(nodes.map((n) => [String(n.id), n]));
+            const layout = buildLayout(nodes);
 
       for (const edge of edges) {
-        const pre = nodes.find((n) => n.id === edge.pre_id);
-        const post = nodes.find((n) => n.id === edge.post_id);
+                const pre = nodeById.get(String(edge.pre_id));
+                const post = nodeById.get(String(edge.post_id));
         if (!pre || !post) continue;
 
-        const p1 = toCanvasPos(pre.x, pre.y);
-        const p2 = toCanvasPos(post.x, post.y);
+                const p1 = layout.toCanvasPos(pre.x, pre.y);
+                const p2 = layout.toCanvasPos(post.x, post.y);
         const w = Math.max(0, Math.min(1, Number(edge.weight || 0)));
         const alpha = 0.15 + w * 0.75;
         const width = 0.6 + w * 3.8;
@@ -181,11 +266,23 @@ def render_panel_html() -> None:
 
       ctx.shadowBlur = 0;
       for (const node of nodes) {
-        const p = toCanvasPos(node.x, node.y);
+                const p = layout.toCanvasPos(node.x, node.y);
         ctx.beginPath();
         ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(229, 236, 255, 0.95)';
         ctx.fill();
+
+                const rawLabel =
+                    node.name ||
+                    node.label ||
+                    nodeNames[String(node.id)] ||
+                    nodeNames[node.id];
+
+                if (rawLabel) {
+                    const label = String(rawLabel);
+                    const shortLabel = label.length > 15 ? `${label.slice(0, 14)}...` : label;
+                    drawConceptLabel(p.x, p.y - 8, shortLabel);
+                }
       }
     }
 
@@ -324,6 +421,125 @@ def _parse_telemetry_text(text: str) -> dict[str, float] | None:
     }
 
 
+def _parse_thought_command(text: str) -> str | None:
+    if not isinstance(text, str):
+        return None
+
+    match = re.search(r"^\s*pensar\s*:\s*(.*?)\s*$", text, re.IGNORECASE)
+    if match is None:
+        return None
+
+    concept = match.group(1).strip()
+    return concept if concept else None
+
+
+def _node_names_from_payload(payload: dict[str, Any]) -> dict[str, str]:
+    raw = payload.get("node_names") or payload.get("nomes") or {}
+    out: dict[str, str] = {}
+    if isinstance(raw, dict):
+        for node_id, name in raw.items():
+            out[str(node_id)] = str(name)
+
+    if out:
+        return out
+
+    nodes = payload.get("nodes")
+    if isinstance(nodes, list):
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            node_id = node.get("id")
+            name = node.get("name")
+            if node_id is None or name is None:
+                continue
+            out[str(node_id)] = str(name)
+    return out
+
+
+def _to_existing_node_id(raw_id: Any, known_ids: dict[str, Any]) -> Any:
+    key = str(raw_id)
+    if key in known_ids:
+        return known_ids[key]
+    return raw_id
+
+
+def _build_network_from_payload(payload: dict[str, Any]) -> SpikingNetwork:
+    try:
+        net = SpikingNetwork(learning_enabled=False)
+    except TypeError:
+        net = SpikingNetwork()
+        if hasattr(net, "learning_enabled"):
+            net.learning_enabled = False
+
+    nodes = payload.get("nodes")
+    synapses = payload.get("synapses")
+
+    node_ids: set[Any] = set()
+    if isinstance(nodes, list):
+        for node in nodes:
+            if isinstance(node, dict) and "id" in node:
+                node_ids.add(node["id"])
+
+    if isinstance(synapses, list):
+        for edge in synapses:
+            if not isinstance(edge, dict):
+                continue
+            if "pre_id" in edge:
+                node_ids.add(edge["pre_id"])
+            if "post_id" in edge:
+                node_ids.add(edge["post_id"])
+
+    if not node_ids:
+        raise ValueError("Estado atual sem topologia de rede para decodificar pensamento")
+
+    for node_id in node_ids:
+        net.add_neuron(node_id=node_id, neuron_instance=LIFNeuron(v_thresh=1.0, tau=20.0, refractory_period=5.0))
+
+    if isinstance(synapses, list):
+        for edge in synapses:
+            if not isinstance(edge, dict):
+                continue
+            if "pre_id" not in edge or "post_id" not in edge:
+                continue
+            net.add_connection(
+                pre_id=edge["pre_id"],
+                post_id=edge["post_id"],
+                weight=float(edge.get("weight", 0.0)),
+                delay_ms=float(edge.get("delay_ms", 0.0)),
+            )
+
+    return net
+
+
+def _decode_thought(payload: dict[str, Any], concept: str) -> dict[str, Any]:
+    network = _build_network_from_payload(payload)
+    node_names = _node_names_from_payload(payload)
+
+    known_ids = {str(node_id): node_id for node_id in network.neurons.keys()}
+    concept_to_id: dict[str, Any] = {}
+    id_to_concept: dict[Any, str] = {}
+    for raw_id, name in node_names.items():
+        node_id = _to_existing_node_id(raw_id, known_ids)
+        concept_to_id[name] = node_id
+        id_to_concept[node_id] = name
+
+    decoder = ThoughtDecoder(concept_to_id=concept_to_id, id_to_concept=id_to_concept, max_hops=8)
+    result = decoder.read_thought(network=network, start_concept=concept, energy=1.25)
+
+    return {
+        "input": concept,
+        "start_node_id": result.start_node_id,
+        "raw_sequence": result.raw_sequence,
+        "concept_chain": result.concept_chain,
+        "natural_language": result.natural_language,
+        "confidence_score": round(result.confidence_score, 6),
+        "coherence_score": round(result.coherence_score, 6),
+        "thermodynamic_state": result.thermodynamic_state,
+        "sequence": result.sequence,
+        "rejected_noise_nodes": result.rejected_noise_nodes,
+    }
+
+
 def _safe_load_external_state(path: Path) -> dict[str, Any] | None:
     try:
         if not path.exists():
@@ -393,6 +609,38 @@ def make_handler(store: _StateStore, external_state_path: Path | None = None):
                 return
 
             telemetry_text = body.get("text") if isinstance(body, dict) else None
+
+            thought_concept = _parse_thought_command(telemetry_text)
+            if thought_concept is not None:
+                base_payload = None
+                if external_state_path is not None:
+                    base_payload = _safe_load_external_state(external_state_path)
+                if base_payload is None:
+                    base_payload = store.get()
+
+                try:
+                    thought_trace = _decode_thought(base_payload, thought_concept)
+                except (KeyError, ValueError) as exc:
+                    self._write_json(400, {"ok": False, "error": str(exc)})
+                    return
+
+                updated_payload = dict(base_payload)
+                updated_meta = dict(updated_payload.get("meta", {}))
+                updated_meta["source"] = "mind_panel.thought_decoder"
+                updated_meta["thought_input"] = thought_concept
+
+                updated_payload["timestamp"] = time.time()
+                updated_payload["meta"] = updated_meta
+                updated_payload["thought_trace"] = thought_trace
+
+                store.set(updated_payload)
+                if external_state_path is not None:
+                    _atomic_write_json(external_state_path, updated_payload)
+
+                print(f"[PENSAMENTO]: {thought_trace.get('concept_chain', '')}")
+                self._write_json(200, {"ok": True, "payload": updated_payload})
+                return
+
             parsed = _parse_telemetry_text(telemetry_text)
             if parsed is None:
                 self._write_json(400, {"ok": False, "error": "Bloco NOMA_NEURAL invalido"})
