@@ -1,6 +1,6 @@
-"""Compat layer: use run_noma_symbiosis as the single runtime entrypoint."""
+"""Compat layer: use main.py as the single runtime entrypoint."""
 
-from run_noma_symbiosis import main
+from main import main
 
 
 if __name__ == "__main__":

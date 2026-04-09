@@ -745,7 +745,7 @@ def main() -> None:
     parser.add_argument(
         "--state-file",
         default=str(DEFAULT_EXTERNAL_STATE_PATH),
-        help="JSON file produced by run_noma_symbiosis.py; if present, /state follows this file.",
+        help="JSON file produced by main.py; if present, /state follows this file.",
     )
     parser.add_argument(
         "--disable-internal-sim",
