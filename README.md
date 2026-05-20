@@ -21,7 +21,7 @@ O propósito da SBSS é decodificar a intenção e modular a sincronia entre a m
 ## ✨ Principais Capacidades
 
 - 🧠 **Decodificação de Intenção (EEG):** Calibração adaptativa baseada no estado de repouso (baseline) extraindo marcadores de foco, calma e ondas gama.
-- ⚡ **Redes Neurais Pulsantes (SNN):** Motor de alta performance implementado em C++ (com fallback para Python) utilizando modelos Leaky Integrate-and-Fire e plasticidade sináptica (STDP).
+- 🌊 **Aprendizado Subliminar via Ondas (arXiv:2507.14805):** Motor de plasticidade onde os pesos sinápticos não são escalares, mas sim **Ondas Transformadas de Peso**. Traços comportamentais são transmitidos ocultamente através do alinhamento (ressonância) de fase.
 - 🌌 **HyperBitnet (Simulação Quântica-Inspirada):** Matrizes eficientes inspiradas no modelo BitNet 1.58b fundidas a grafos quânticos para processar estados abstratos.
 - 🔗 **NomaCore & MNHI 4.0:** O coração dinâmico em tempo real do sistema, responsável pelo rastreamento da memória sináptica, telemetria *NOMA_NEURAL* e estados vitais.
 - 🕹️ **Integração TRIBE:** Tradução fluida das intenções puras decodificadas para comandos de atuação de alto nível.
@@ -40,7 +40,7 @@ graph TD
     C -->|Ativação| D(Spiking Neural Network SNN)
     C -->|Injeção de Estado| E(HyperBitnet)
     
-    D <-->|STDP Learning| E
+    D <-->|Ressonância / Wave Plasticity| E
     
     E -->|Fusão Matricial Quântica| F(Decodificador de Pensamentos Layer 4)
     F -->|Vetor de Intenção| G[TRIBE Command Adapter]
