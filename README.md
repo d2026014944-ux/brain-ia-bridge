@@ -1,4 +1,4 @@
-# brain-ia-bridge
+# Sincronia Bio-Sintética Subliminar (SBSS)
 
 Bridge de integração entre EEG (Crown/Neurosity), HyperBitnet e TRIBE para
 experimentos de biofeedback e decodificação de intenção em tempo real.
