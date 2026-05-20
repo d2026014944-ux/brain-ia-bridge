@@ -68,3 +68,36 @@ class SpikingNetwork:
             if fired and target_id in self.synapses:
                 for post_id, conn_weight, delay_ms in self.synapses[target_id]:
                     self.schedule_event(time_ms + delay_ms, post_id, conn_weight)
+
+    def run_and_trace(self):
+        """
+        Execute all pending events and return a deterministic firing trace.
+
+        Each trace item is a dict with:
+        - time_ms: firing timestamp
+        - event_id: tie-breaker sequence id from the event queue
+        - node_id: neuron identifier that fired
+        - input_weight: input pulse that triggered processing
+        """
+        trace = []
+        while self.event_queue:
+            time_ms, event_id, target_id, weight = self.pop_next_event()
+
+            neuron = self.neurons[target_id]
+            fired = neuron.receive_spike(time_ms, weight)
+
+            if fired:
+                trace.append(
+                    {
+                        "time_ms": float(time_ms),
+                        "event_id": int(event_id),
+                        "node_id": target_id,
+                        "input_weight": float(weight),
+                    }
+                )
+
+                if target_id in self.synapses:
+                    for post_id, conn_weight, delay_ms in self.synapses[target_id]:
+                        self.schedule_event(time_ms + delay_ms, post_id, conn_weight)
+
+        return trace
